@@ -1,0 +1,117 @@
+#!/usr/bin/env python3
+"""Media processor for WeChat Bridge. Outputs text to stdout in UTF-8."""
+import sys, os, subprocess, json
+from pathlib import Path
+
+CACHE_DIR = os.path.expanduser("~/.claude/channels/wechat/media/processed")
+os.makedirs(CACHE_DIR, exist_ok=True)
+
+# Force UTF-8 for stdout
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+
+
+def ocr_image(path):
+    """Image analysis: cloud tagging + OCR (local PaddleOCR + cloud fallback)."""
+    parts = []
+
+    # 1. Cloud image tagging (Tencent Cloud TIIA)
+    try:
+        from cloud_vision import image_tag
+        tags = image_tag(path)
+        if tags and "[未识别到标签]" not in tags:
+            parts.append(f"[图片场景] {tags}")
+    except Exception:
+        pass
+
+    # 2. OCR via PaddleOCR (local, reliable for Chinese text)
+    try:
+        from paddleocr import PaddleOCR
+        ocr = PaddleOCR(lang="ch", show_log=False)
+        result = ocr.ocr(path)
+        lines = []
+        if result and result[0]:
+            for line in result[0]:
+                text = line[1][0]
+                if text.strip():
+                    lines.append(text.strip())
+        if lines:
+            parts.append(f"[图片文字]\n" + "\n".join(lines))
+    except Exception:
+        # PaddleOCR failed, try cloud OCR
+        try:
+            from cloud_vision import ocr_general
+            text = ocr_general(path)
+            if text and "[OCR:" not in text:
+                parts.append(f"[图片文字(云)]\n{text}")
+        except Exception:
+            pass
+
+    return "\n".join(parts) if parts else "[未识别到内容]"
+
+
+def transcribe_voice(path):
+    import whisper
+    model = whisper.load_model("small")
+    result = model.transcribe(path, language="zh")
+    return result["text"].strip() or "[Whisper: 未识别到语音]"
+
+
+def process_video(path):
+    output = []
+    basename = Path(path).stem
+    audio_path = os.path.join(CACHE_DIR, f"{basename}_audio.wav")
+    subprocess.run([
+        "ffmpeg", "-i", path, "-vn", "-acodec", "pcm_s16le",
+        "-ar", "16000", "-ac", "1", audio_path, "-y"
+    ], capture_output=True)
+
+    if os.path.exists(audio_path) and os.path.getsize(audio_path) > 1000:
+        try:
+            text = transcribe_voice(audio_path)
+            output.append(f"[语音转写]\n{text}")
+        except Exception as e:
+            output.append(f"[语音转写失败: {e}]")
+
+    frames_dir = os.path.join(CACHE_DIR, f"{basename}_frames")
+    os.makedirs(frames_dir, exist_ok=True)
+    subprocess.run([
+        "ffmpeg", "-i", path, "-vf", "fps=1/5",
+        os.path.join(frames_dir, "frame_%03d.jpg"), "-y"
+    ], capture_output=True)
+
+    frames = sorted(Path(frames_dir).glob("frame_*.jpg"))
+    if frames:
+        output.append(f"\n[关键帧OCR ({len(frames)}帧)]")
+        for f in frames[:6]:
+            try:
+                text = ocr_image(str(f))
+                if text and "[OCR: 未识别到文字]" not in text:
+                    output.append(f"--- {f.name} ---\n{text}")
+            except Exception as e:
+                pass
+
+    return "\n".join(output) if output else "[视频处理完成]"
+
+
+if __name__ == "__main__":
+    if len(sys.argv) < 3:
+        print("Usage: media-processor.py <image|voice|video> <filepath>")
+        sys.exit(1)
+
+    mtype = sys.argv[1]
+    fpath = sys.argv[2]
+
+    if not os.path.exists(fpath):
+        print(f"[错误: 文件不存在: {fpath}]")
+        sys.exit(1)
+
+    try:
+        if mtype == "image":
+            print(ocr_image(fpath))
+        elif mtype == "voice":
+            print(transcribe_voice(fpath))
+        elif mtype == "video":
+            print(process_video(fpath))
+    except Exception as e:
+        print(f"[处理失败: {e}]")

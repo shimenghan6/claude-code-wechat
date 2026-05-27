@@ -1,0 +1,7 @@
+account.json
+credentials.json
+*.log
+node_modules/
+__pycache__/
+*.pyc
+.env

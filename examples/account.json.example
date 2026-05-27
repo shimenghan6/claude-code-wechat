@@ -1,0 +1,7 @@
+{
+  "baseUrl": "https://ilinkai.weixin.qq.com",
+  "token": "YOUR_BOT_TOKEN",
+  "accountId": "YOUR_BOT_ID@im.bot",
+  "userId": "YOUR_USER_ID@im.wechat",
+  "savedAt": "2026-01-01T00:00:00.000Z"
+}
