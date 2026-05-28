@@ -1,16 +1,32 @@
 # Claude Code WeChat Bridge
 
-微信远程操控 Claude Code。文字/图片/语音/视频/文件全部支持，上下文连续，记忆保持。
+> 在微信里遥控你的电脑。发条消息，Claude Code 帮你写代码、搜网页、改文件、执行命令——就像坐在电脑前一样。
+
+**只需要一部 iPhone 和微信。不用 VPN，不用服务器，不用付费 API。扫码即用，开机自启。**
+
+```
+你用微信发消息 → 电脑上的 Claude Code 干活 → 结果自动回复到微信
+                   ├─ 写代码、跑命令、读文件
+                   ├─ 还能识字 (PaddleOCR)
+                   ├─ 还能识景 (腾讯云 TIIA)  
+                   ├─ 还能听语音 (Whisper)
+                   └─ 还能看视频 (FFmpeg)
+```
+
+### 谁需要这个
+
+| 你 | 为什么你需要 |
+|----|------------|
+| 离开电脑但想继续干活 | 微信就是你的终端 |
+| 笔记本盒盖了不想打开 | 远程唤醒，随时操控 |
+| 多人协作想共享 AI 能力 | 一个微信 bot，全团队用 |
+| 用的是 DeepSeek/第三方 API | 官方 Channel 需要 Anthropic 订阅，这个不需要 |
+
+---
 
 ```
 微信 (iOS) → ClawBot 插件 → iLink API → wechat-bridge → Claude Code (同一会话)
-                                          ├─ PaddleOCR (识字)
-                                          ├─ 腾讯云 TIIA (识景)
-                                          ├─ Whisper (语音转文字)
-                                          └─ FFmpeg (视频分离)
 ```
-
----
 
 ## 目录
 
