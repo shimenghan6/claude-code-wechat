@@ -69,21 +69,32 @@
 
 ## 一键安装
 
-### 1. 克隆项目
+### Windows
+
+1. 下载 `install.bat` → **双击运行**
+2. 按提示扫码 → 粘贴凭证 → 完成
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/claude-code-wechat.git ~/.claude/skills/claude-code-wechat
-cd ~/.claude/skills/claude-code-wechat
+# 或者一行命令
+curl -fsSL https://raw.githubusercontent.com/shimenghan6/claude-code-wechat/master/install.bat -o install.bat && install.bat
 ```
 
-### 2. 安装依赖
+### macOS / Linux
 
 ```bash
+curl -fsSL https://raw.githubusercontent.com/shimenghan6/claude-code-wechat/master/install.sh | bash
+```
+
+### 手动安装
+
+```bash
+git clone https://github.com/shimenghan6/claude-code-wechat.git ~/.claude/skills/claude-code-wechat
+cd ~/.claude/skills/claude-code-wechat
 npm install -g claude-code-wechat-channel @weixin-claw/core
 pip install paddleocr openai-whisper tencentcloud-sdk-python
 ```
 
-### 3. 扫码认证
+### 扫码认证
 
 ```bash
 # 获取扫码链接
