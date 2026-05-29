@@ -5,11 +5,22 @@
  * All messages feed into a single Claude Code session via --resume.
  */
 
-import { spawn } from "node:child_process";
+import { spawn, execSync } from "node:child_process";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { homedir } from "node:os";
-import { execSync } from "node:child_process";
+
+// Kill old bridge instances on startup (prevent duplicate replies)
+const PID_FILE = resolve(HOME, ".claude", "channels", "wechat", "bridge.pid");
+try {
+  const oldPid = parseInt(readFileSync(PID_FILE, "utf-8").trim(), 10);
+  if (oldPid && oldPid !== process.pid) {
+    try { process.kill(oldPid, "SIGTERM"); } catch {}
+    try { spawn("taskkill", ["//F", "//PID", String(oldPid)], { shell: true, stdio: "ignore" }); } catch {}
+  }
+} catch {}
+writeFileSync(PID_FILE, String(process.pid));
+process.on("exit", () => { try { require("fs").unlinkSync(PID_FILE); } catch {} });
 
 // Auto-detect npm global path (cross-platform)
 function getNpmGlobalPath() {
@@ -176,12 +187,15 @@ async function callClaude(prompt) {
   // Try --resume first, fall back to --session-id if session doesn't exist
   for (const flag of ["--resume", "--session-id"]) {
     const result = await new Promise((resolve, reject) => {
-      const child = spawn("claude", ["-p", flag, SESSION_ID, prompt], {
+      // Use stdin to pass prompt (avoids shell escaping issues with spaces/English)
+      const child = spawn("claude", ["-p", flag, SESSION_ID], {
         env: { ...process.env, CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "", PATH: process.env.PATH },
         stdio: ["pipe", "pipe", "pipe"],
         shell: true,
         timeout: 300000,
       });
+      child.stdin.write(prompt);
+      child.stdin.end();
       let stdout = "";
       let stderr = "";
       child.stdout.on("data", (d) => (stdout += d));
