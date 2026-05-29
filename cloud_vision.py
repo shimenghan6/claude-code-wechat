@@ -119,24 +119,38 @@ def video_analyze(path):
 
     # Scene classification based on tag patterns
     scene_hints = []
-    dance_keywords = ["舞蹈", "跳舞", "舞者", "芭蕾"]
-    ride_keywords = ["自行车", "骑行", "摩托车", "骑行服", "头盔"]
-    ad_keywords = ["文字", "字体", "广告", "品牌", "文本", "商标", "海报"]
-    sport_keywords = ["运动", "跑步", "游泳", "健身", "运动员", "球场"]
-    food_keywords = ["食物", "膳食", "菜肴", "厨房", "餐厅"]
-    travel_keywords = ["风景", "山水", "海滩", "建筑", "塔"]
-    people_keywords = ["人物", "人群", "面部", "肖像"]
+    categories = {
+        "舞台/演出/年会": ["舞台", "灯光", "演出", "表演", "歌手", "麦克风", "音乐会", "演唱会",
+                       "卡拉ok", "ktv", "年會", "晚会", "颁奖", "典礼", "舞臺", "歌舞"],
+        "运动/体育": ["运动", "跑步", "游泳", "健身", "运动员", "球场", "比赛", "篮球",
+                     "足球", "乒乓球", "羽毛球", "拳击", "赛跑", "滑板", "滑雪", "冲浪"],
+        "跳舞": ["舞蹈", "跳舞", "舞者", "芭蕾", "街舞", "现代舞", "民族舞", "舞厅", "disco"],
+        "骑行/户外": ["自行车", "骑行", "摩托车", "骑行服", "头盔", "山地车", "公路车"],
+        "广告/宣传": ["文字", "字体", "广告", "品牌", "文本", "商标", "海报", "横幅",
+                     "宣传", "推广", "logo", "slogan"],
+        "美食/烹饪": ["食物", "膳食", "菜肴", "厨房", "餐厅", "美食", "烹饪", "厨师",
+                     "烧烤", "火锅", "甜点", "饮品"],
+        "风景/旅游": ["风景", "山水", "海滩", "建筑", "塔", "自然", "日落", "日出",
+                     "山脉", "湖泊", "森林", "花海"],
+        "教学/会议": ["教室", "黑板", "屏幕", "讲座", "课堂", "老师", "学术", "会议",
+                     "研讨会", "白板", "投影", "ppt"],
+        "游戏/电竞": ["游戏", "电竞", "电脑", "主机", "手柄", "玩家", "屏幕", "键盘"],
+        "宠物/动物": ["猫", "狗", "动物", "宠物", "鸟", "鱼", "兔子", "仓鼠"],
+        "购物/开箱": ["商品", "包装", "开箱", "购物", "商场", "店铺", "展示", "试用"],
+        "化妆/美妆": ["化妆", "口红", "眼影", "美容", "护肤", "粉底", "美甲", "发型"],
+    }
 
     tags_lower = tag_str.lower()
-    if any(k in tags_lower for k in dance_keywords): scene_hints.append("可能是在跳舞")
-    if any(k in tags_lower for k in ride_keywords): scene_hints.append("可能是骑行/户外运动")
-    if any(k in tags_lower for k in ad_keywords): scene_hints.append("可能是广告/宣传内容")
-    if any(k in tags_lower for k in sport_keywords): scene_hints.append("可能是体育运动")
-    if any(k in tags_lower for k in food_keywords): scene_hints.append("可能是美食/烹饪")
-    if any(k in tags_lower for k in travel_keywords): scene_hints.append("可能是风景/旅游")
-    if any(k in tags_lower for k in people_keywords): scene_hints.append("有人物出镜")
+    for category, keywords in categories.items():
+        if any(k in tags_lower for k in keywords):
+            scene_hints.append(category)
 
-    hint_str = "；".join(scene_hints) if scene_hints else ""
+    # Always check if people present
+    if any(k in tags_lower for k in ["人", "人物", "人群", "面部", "肖像"]):
+        if not any("人物" in h for h in scene_hints):
+            scene_hints.append("有人物出镜")
+
+    hint_str = "；".join(scene_hints[:3]) if scene_hints else ""
     result = f"[视频场景标签] {tag_str}"
     if hint_str:
         result += f"\n[场景推断] {hint_str}"

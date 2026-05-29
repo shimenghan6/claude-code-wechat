@@ -61,7 +61,7 @@ def ocr_image(path):
 
 def transcribe_voice(path):
     import whisper
-    model = whisper.load_model("small")
+    model = whisper.load_model("medium")
     result = model.transcribe(path, language="zh")
     return result["text"].strip() or "[Whisper: 未识别到语音]"
 
