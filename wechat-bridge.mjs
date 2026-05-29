@@ -107,7 +107,22 @@ async function getUpdates(buf) {
   return JSON.parse(raw);
 }
 
+function stripMarkdown(text) {
+  return text
+    .replace(/```[\s\S]*?```/g, '')     // code blocks → remove
+    .replace(/`([^`]+)`/g, '$1')        // inline code → plain
+    .replace(/\*\*([^*]+)\*\*/g, '$1')  // bold → plain
+    .replace(/\*([^*]+)\*/g, '$1')      // italic → plain
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // links → text only
+    .replace(/^[#]{1,6}\s+/gm, '')      // headings → plain
+    .replace(/^[-*+]\s+/gm, '· ')       // bullet points → dot
+    .replace(/^\d+\.\s+/gm, '')         // numbered lists → plain
+    .replace(/\n{3,}/g, '\n\n')         // collapse multiple newlines
+    .trim();
+}
+
 async function sendMessage(to, text, contextToken) {
+  text = stripMarkdown(text);
   const clientId = `claude-code-wechat:${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
   const body = JSON.stringify({
     msg: {
