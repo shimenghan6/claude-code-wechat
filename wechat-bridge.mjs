@@ -11,7 +11,7 @@ import { resolve } from "node:path";
 import { homedir } from "node:os";
 
 // Kill old bridge instances on startup (prevent duplicate replies)
-const PID_FILE = resolve(HOME, ".claude", "channels", "wechat", "bridge.pid");
+const PID_FILE = resolve(homedir(), ".claude", "channels", "wechat", "bridge.pid");
 try {
   const oldPid = parseInt(readFileSync(PID_FILE, "utf-8").trim(), 10);
   if (oldPid && oldPid !== process.pid) {
