@@ -153,23 +153,17 @@ async function sendMessage(to, text, contextToken) {
 
 const SESSION_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
 
-// Auto-detect Python (try full path first, most reliable)
+// Auto-detect Python (use forward slashes for cross-platform spawn compatibility)
 function getPython() {
-  // Check common paths first (most reliable on Windows)
-  const home = homedir();
+  const home = homedir().replace(/\\/g, "/");
   const paths = [
-    `${home}\\AppData\\Local\\Programs\\Python\\Python312\\python.exe`,
-    `${home}\\AppData\\Local\\Programs\\Python\\Python311\\python.exe`,
-    `${home}\\AppData\\Local\\Programs\\Python\\Python310\\python.exe`,
+    `${home}/AppData/Local/Programs/Python/Python312/python.exe`,
+    `${home}/AppData/Local/Programs/Python/Python311/python.exe`,
     "python3", "python",
   ];
   for (const cmd of paths) {
     try {
-      if (cmd.includes(":\\") || cmd.includes(":\\")) {
-        if (existsSync(cmd)) { execSync(`"${cmd}" --version`, { stdio: "pipe" }); return cmd; }
-      } else {
-        execSync(`"${cmd}" --version`, { stdio: "pipe" }); return cmd;
-      }
+      if (existsSync(cmd)) { execSync(`"${cmd}" --version`, { stdio: "pipe" }); return cmd; }
     } catch {}
   }
   return "python";
