@@ -70,9 +70,82 @@ def image_describe(path):
     return "\n".join(parts) if parts else "[未识别到内容]"
 
 
+def video_analyze(path):
+    """Video scene analysis: extract key frames + classify via TIIA + aggregate results.
+    Returns scene description like '在跳舞' or '骑行运动'."""
+    import subprocess, tempfile
+    tmpdir = tempfile.mkdtemp(prefix="video_frames_")
+
+    # Extract 1 frame every 2 seconds with FFmpeg
+    ffmpeg = os.path.expanduser(
+        "~/AppData/Local/Microsoft/WinGet/Packages/"
+        "Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/"
+        "ffmpeg-8.1.1-full_build/bin/ffmpeg.exe"
+    )
+    if not os.path.exists(ffmpeg):
+        ffmpeg = "ffmpeg"
+
+    subprocess.run([ffmpeg, "-i", path, "-vf", "fps=1/2",
+                    os.path.join(tmpdir, "f_%03d.jpg"), "-y"],
+                   capture_output=True)
+
+    frames = sorted(Path(tmpdir).glob("f_*.jpg"))
+    if not frames:
+        return "[视频分析: 无帧可提取]"
+
+    # Analyze each frame via TIIA, aggregate results
+    all_tags = {}
+    frame_count = min(len(frames), 15)  # Max 15 frames (30 seconds)
+    for f in frames[:frame_count]:
+        try:
+            tags_str = image_tag(str(f))
+            if tags_str and "[未识别到标签]" not in tags_str:
+                for tag_part in tags_str.split(", "):
+                    name, conf = tag_part.rsplit("(", 1)
+                    conf = int(conf.rstrip("%)"))
+                    name = name.strip()
+                    if name not in all_tags or all_tags[name] < conf:
+                        all_tags[name] = conf
+        except:
+            pass
+
+    # Cleanup
+    import shutil
+    shutil.rmtree(tmpdir, ignore_errors=True)
+
+    # Sort by confidence, take top 15
+    sorted_tags = sorted(all_tags.items(), key=lambda x: x[1], reverse=True)[:15]
+    tag_str = ", ".join(f"{n}({c}%)" for n, c in sorted_tags) if sorted_tags else "[未识别到场景]"
+
+    # Scene classification based on tag patterns
+    scene_hints = []
+    dance_keywords = ["舞蹈", "跳舞", "舞者", "芭蕾"]
+    ride_keywords = ["自行车", "骑行", "摩托车", "骑行服", "头盔"]
+    ad_keywords = ["文字", "字体", "广告", "品牌", "文本", "商标", "海报"]
+    sport_keywords = ["运动", "跑步", "游泳", "健身", "运动员", "球场"]
+    food_keywords = ["食物", "膳食", "菜肴", "厨房", "餐厅"]
+    travel_keywords = ["风景", "山水", "海滩", "建筑", "塔"]
+    people_keywords = ["人物", "人群", "面部", "肖像"]
+
+    tags_lower = tag_str.lower()
+    if any(k in tags_lower for k in dance_keywords): scene_hints.append("可能是在跳舞")
+    if any(k in tags_lower for k in ride_keywords): scene_hints.append("可能是骑行/户外运动")
+    if any(k in tags_lower for k in ad_keywords): scene_hints.append("可能是广告/宣传内容")
+    if any(k in tags_lower for k in sport_keywords): scene_hints.append("可能是体育运动")
+    if any(k in tags_lower for k in food_keywords): scene_hints.append("可能是美食/烹饪")
+    if any(k in tags_lower for k in travel_keywords): scene_hints.append("可能是风景/旅游")
+    if any(k in tags_lower for k in people_keywords): scene_hints.append("有人物出镜")
+
+    hint_str = "；".join(scene_hints) if scene_hints else ""
+    result = f"[视频场景标签] {tag_str}"
+    if hint_str:
+        result += f"\n[场景推断] {hint_str}"
+    return result
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print("Usage: cloud-vision.py <ocr|tag|describe> <filepath>")
+        print("Usage: cloud-vision.py <ocr|tag|describe|video> <filepath>")
         sys.exit(1)
 
     cmd = sys.argv[1]
@@ -89,6 +162,8 @@ if __name__ == "__main__":
             print(image_tag(fpath))
         elif cmd == "describe":
             print(image_describe(fpath))
+        elif cmd == "video":
+            print(video_analyze(fpath))
     except TencentCloudSDKException as e:
         print(f"[API错误: {e}]")
     except Exception as e:

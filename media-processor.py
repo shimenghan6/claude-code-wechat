@@ -6,6 +6,15 @@ from pathlib import Path
 CACHE_DIR = os.path.expanduser("~/.claude/channels/wechat/media/processed")
 os.makedirs(CACHE_DIR, exist_ok=True)
 
+# FFmpeg path (winget install)
+_FFMPEG_BASE = os.path.expanduser(
+    "~/AppData/Local/Microsoft/WinGet/Packages/"
+    "Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.1-full_build/bin"
+)
+if os.path.isdir(_FFMPEG_BASE):
+    os.environ["PATH"] = _FFMPEG_BASE + ";" + os.environ.get("PATH", "")
+FFMPEG = os.path.join(_FFMPEG_BASE, "ffmpeg.exe") if os.path.isdir(_FFMPEG_BASE) else "ffmpeg"
+
 # Force UTF-8 for stdout
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
@@ -57,12 +66,30 @@ def transcribe_voice(path):
     return result["text"].strip() or "[Whisper: 未识别到语音]"
 
 
+def analyze_video_scene(path):
+    """Use Tencent Cloud to understand what's happening in a video."""
+    try:
+        from cloud_vision import video_analyze
+        return video_analyze(path)
+    except Exception as e:
+        return f"[视频场景分析失败: {e}]"
+
+
 def process_video(path):
     output = []
     basename = Path(path).stem
+
+    # Scene analysis via Tencent Cloud
+    try:
+        scene = analyze_video_scene(path)
+        if scene and "[视频场景分析失败]" not in scene:
+            output.append(scene)
+    except:
+        pass
+
     audio_path = os.path.join(CACHE_DIR, f"{basename}_audio.wav")
     subprocess.run([
-        "ffmpeg", "-i", path, "-vn", "-acodec", "pcm_s16le",
+        FFMPEG, "-i", path, "-vn", "-acodec", "pcm_s16le",
         "-ar", "16000", "-ac", "1", audio_path, "-y"
     ], capture_output=True)
 
@@ -76,7 +103,7 @@ def process_video(path):
     frames_dir = os.path.join(CACHE_DIR, f"{basename}_frames")
     os.makedirs(frames_dir, exist_ok=True)
     subprocess.run([
-        "ffmpeg", "-i", path, "-vf", "fps=1/5",
+        FFMPEG, "-i", path, "-vf", "fps=1/5",
         os.path.join(frames_dir, "frame_%03d.jpg"), "-y"
     ], capture_output=True)
 
