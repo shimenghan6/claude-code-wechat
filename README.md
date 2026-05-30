@@ -350,6 +350,9 @@ powercfg -SETACTIVE SCHEME_CURRENT
 rundll32.exe powrprof.dll,SetSuspendState 0,1,0
 ```
 
+> 免审批：在 `~/.claude/settings.json` 的 `permissions.allow` 中添加：
+> `"Bash(rundll32.exe powrprof.dll,SetSuspendState *)"`
+
 ---
 
 ## 架构详解
