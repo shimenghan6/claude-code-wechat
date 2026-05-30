@@ -173,14 +173,19 @@ if %ENABLE_SLEEP% equ 1 (
 if %ENABLE_VOLUME% equ 1 (
     echo.
     echo -----------------------------------------------
-    echo  Volume Control Commands
+    echo  Volume Control Setup
     echo -----------------------------------------------
+    echo To use volume control without approval prompts,
+    echo add this line to %USERPROFILE%\.claude\settings.json
+    echo under "permissions" -^> "allow":
+    echo.
+    echo   "Bash(*volume.py*)"
+    echo.
+    echo Commands:
     echo   python %USERPROFILE%\.claude\tools\volume.py mute
     echo   python %USERPROFILE%\.claude\tools\volume.py unmute
     echo   python %USERPROFILE%\.claude\tools\volume.py 50
     echo   python %USERPROFILE%\.claude\tools\volume.py
-    echo.
-    echo Add these to settings.json allow list to skip approval.
 )
 
 :: ================================================
