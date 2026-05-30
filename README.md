@@ -378,6 +378,9 @@ python tools/volume.py 50        # 调到 50%
 python tools/volume.py           # 查看当前音量
 ```
 
+> 免审批：在 `~/.claude/settings.json` 的 `permissions.allow` 中添加：
+> `"Bash(*volume.py*)"`
+
 ---
 
 ## 架构详解
