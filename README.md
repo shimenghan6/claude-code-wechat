@@ -71,8 +71,12 @@
 
 ### Windows
 
-1. 下载 `install.bat` → **双击运行**
-2. 按提示扫码 → 粘贴凭证 → 完成
+1. 下载 [install.bat](install.bat) → **双击运行**
+2. 安装中会询问是否启用可选功能：
+   - **[1] 远程休眠** — 微信发"sleep"让电脑休眠
+   - **[2] 音量控制** — 微信遥控静音/调音量百分比
+   - 输入 `12` 全选，`1` 只要休眠，`2` 只要音量，`0` 跳过
+3. 按提示扫码 → 粘贴凭证 → 完成
 
 ```bash
 # 或者一行命令
@@ -92,6 +96,12 @@ git clone https://github.com/shimenghan6/claude-code-wechat.git ~/.claude/skills
 cd ~/.claude/skills/claude-code-wechat
 npm install -g claude-code-wechat-channel @weixin-claw/core
 pip install paddleocr openai-whisper tencentcloud-sdk-python
+
+# 可选：音量控制
+pip install pycaw
+cp tools/volume.py ~/.claude/tools/volume.py
+
+# 可选：远程休眠（需手动在 settings.json 加权限，见下文）
 ```
 
 ### 扫码认证
