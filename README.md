@@ -353,6 +353,21 @@ rundll32.exe powrprof.dll,SetSuspendState 0,1,0
 > 免审批：在 `~/.claude/settings.json` 的 `permissions.allow` 中添加：
 > `"Bash(rundll32.exe powrprof.dll,SetSuspendState *)"`
 
+### 音量控制
+
+依赖 `pycaw`（COM 音频 API）：
+
+```bash
+pip install pycaw
+```
+
+```bash
+python tools/volume.py mute      # 静音
+python tools/volume.py unmute    # 取消静音
+python tools/volume.py 50        # 调到 50%
+python tools/volume.py           # 查看当前音量
+```
+
 ---
 
 ## 架构详解
