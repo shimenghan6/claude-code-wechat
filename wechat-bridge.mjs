@@ -157,6 +157,7 @@ async function sendMessage(to, text, contextToken) {
 }
 
 const SESSION_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+const SESSION_FILE = resolve(HOME, ".claude", "projects", "C--Users-shish", `${SESSION_ID}.jsonl`);
 
 // Auto-detect Python (use forward slashes for cross-platform spawn compatibility)
 function getPython() {
@@ -340,6 +341,14 @@ async function main() {
           }
         }
         if (!text && mediaPaths.length === 0) continue;
+
+        // Handle built-in commands
+        if (text.trim() === "/restart") {
+          try { execSync(`rm -f "${SESSION_FILE}"`, { stdio: "ignore" }); } catch {}
+          await sendMessage(from, "会话已重启，下一条消息开始新对话。", ctxToken);
+          log(`会话已重启: ${from}`);
+          continue;
+        }
 
         const prompt = text + (mediaPaths.length ? "\n" + mediaPaths.join("\n") : "");
 
