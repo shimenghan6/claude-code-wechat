@@ -157,7 +157,6 @@ async function sendMessage(to, text, contextToken) {
 }
 
 const SESSION_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
-const SESSION_FILE = resolve(HOME, ".claude", "projects", "C--Users-shish", `${SESSION_ID}.jsonl`);
 
 // Auto-detect Python (use forward slashes for cross-platform spawn compatibility)
 function getPython() {
@@ -344,9 +343,8 @@ async function main() {
 
         // Handle built-in commands
         if (text.trim() === "/restart") {
-          try { execSync(`rm -f "${SESSION_FILE}"`, { stdio: "ignore" }); } catch {}
-          await sendMessage(from, "会话已重启，下一条消息开始新对话。", ctxToken);
-          log(`会话已重启: ${from}`);
+          await sendMessage(from, "会话已刷新。每次微信消息都独立调用 Claude，历史记录全保留。", ctxToken);
+          log(`会话刷新: ${from}`);
           continue;
         }
 
