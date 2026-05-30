@@ -189,6 +189,20 @@ if %ENABLE_VOLUME% equ 1 (
 )
 
 :: ================================================
+::  BUILT-IN WECHAT COMMANDS
+:: ================================================
+
+echo.
+echo -----------------------------------------------
+echo  Built-in WeChat Commands
+echo -----------------------------------------------
+echo   Send these from WeChat anytime:
+echo     "重新打开会话" - refresh session (keeps history)
+echo     "/restart"     - same as above
+echo     "让电脑睡眠"   - put PC to sleep (if enabled)
+echo     "音量调到50"    - set volume %% (if enabled)
+
+:: ================================================
 ::  DONE
 :: ================================================
 

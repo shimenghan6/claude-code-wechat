@@ -341,8 +341,9 @@ async function main() {
         }
         if (!text && mediaPaths.length === 0) continue;
 
-        // Handle built-in commands
-        if (text.trim() === "/restart") {
+        // Handle built-in commands (natural Chinese aliases)
+        const normalized = text.trim();
+        if (normalized === "/restart" || normalized === "重新打开会话" || normalized === "重启会话") {
           await sendMessage(from, "会话已刷新。每次微信消息都独立调用 Claude，历史记录全保留。", ctxToken);
           log(`会话刷新: ${from}`);
           continue;
