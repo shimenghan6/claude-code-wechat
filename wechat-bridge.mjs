@@ -18,9 +18,9 @@ try {
     try { process.kill(oldPid); } catch {}
   }
 } catch {}
-// Kill ALL old wechat/node processes (bridge + channel duplicates)
+// Kill old wechat/node processes EXCEPT current one
 try {
-  execSync('powershell -Command "Get-WmiObject Win32_Process -Filter \'Name=\\"node.exe\\"\' | Where-Object { $_.CommandLine -match \'wechat-bridge|wechat-channel|cli\\\\.mjs.*start\' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"', { stdio: "ignore", timeout: 5000 });
+  execSync(`powershell -Command "Get-WmiObject Win32_Process -Filter 'Name=\\"node.exe\\"' | Where-Object { $_.CommandLine -match 'wechat-bridge|wechat-channel|cli\\\\.mjs.*start' -and $_.ProcessId -ne ${process.pid} } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"`, { stdio: "ignore", timeout: 5000 });
 } catch {}
 // Small delay to ensure ports are freed
 await new Promise(r => setTimeout(r, 1000));
