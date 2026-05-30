@@ -10,15 +10,20 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { homedir } from "node:os";
 
-// Kill old bridge instances on startup (prevent duplicate replies)
+// Kill old bridge AND channel instances on startup (prevent duplicate replies)
 const PID_FILE = resolve(homedir(), ".claude", "channels", "wechat", "bridge.pid");
 try {
   const oldPid = parseInt(readFileSync(PID_FILE, "utf-8").trim(), 10);
   if (oldPid && oldPid !== process.pid) {
-    try { process.kill(oldPid, "SIGTERM"); } catch {}
-    try { spawn("taskkill", ["//F", "//PID", String(oldPid)], { shell: true, stdio: "ignore" }); } catch {}
+    try { process.kill(oldPid); } catch {}
   }
 } catch {}
+// Kill ALL old wechat/node processes (bridge + channel duplicates)
+try {
+  execSync('powershell -Command "Get-WmiObject Win32_Process -Filter \'Name=\\"node.exe\\"\' | Where-Object { $_.CommandLine -match \'wechat-bridge|wechat-channel|cli\\\\.mjs.*start\' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"', { stdio: "ignore", timeout: 5000 });
+} catch {}
+// Small delay to ensure ports are freed
+await new Promise(r => setTimeout(r, 1000));
 writeFileSync(PID_FILE, String(process.pid));
 process.on("exit", () => { try { require("fs").unlinkSync(PID_FILE); } catch {} });
 
