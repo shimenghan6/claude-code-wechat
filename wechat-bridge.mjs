@@ -367,7 +367,17 @@ async function main() {
   }
 }
 
-main().catch((e) => {
-  logError(`致命错误: ${e.message}`);
-  process.exit(1);
-});
+// Self-healing: auto-restart on crash (prevents manual intervention)
+async function runWithRestart() {
+  while (true) {
+    try {
+      await main();
+    } catch (e) {
+      logError(`Bridge crashed: ${e.message}`);
+      log(`Restarting in 5s...`);
+      await new Promise(r => setTimeout(r, 5000));
+    }
+  }
+}
+
+runWithRestart();
