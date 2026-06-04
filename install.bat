@@ -111,6 +111,10 @@ copy /Y "%~dp0media-processor.py" "%USERPROFILE%\.claude\media-processor.py" >nu
 copy /Y "%~dp0cloud_vision.py" "%USERPROFILE%\.claude\cloud_vision.py" >nul 2>&1
 if exist "%~dp0cloud-vision.py" copy /Y "%~dp0cloud-vision.py" "%USERPROFILE%\.claude\cloud-vision.py" >nul 2>&1
 
+:: 复制 start-wechat-channel.bat（含自动清理+崩溃重启+防重复）
+copy /Y "%~dp0start-wechat-channel.bat" "%USERPROFILE%\.claude\start-wechat-channel.bat" >nul 2>&1
+echo   [完成] start-wechat-channel.bat ^(含自动清理+崩溃重启+防重复^)
+
 :: 复制 SKILL.md 到 skills 目录
 if exist "%~dp0SKILL.md" (
     if not exist "%USERPROFILE%\.claude\skills\claude-code-wechat" mkdir "%USERPROFILE%\.claude\skills\claude-code-wechat" 2>nul
@@ -129,29 +133,14 @@ if !ENABLE_VOLUME! equ 1 (
 echo   [完成] 核心文件已复制到 %USERPROFILE%\.claude\
 
 :: ================================================
-:: 启动脚本
+:: 开机自启
 :: ================================================
 echo.
-echo   创建启动脚本...
-
-(
-echo @echo off
-echo title Claude WeChat Bridge
-echo cd /d "%USERPROFILE%"
-echo echo Cleaning old processes...
-echo powershell -Command "Get-WmiObject Win32_Process -Filter 'Name=\"node.exe\"' ^| Where-Object { $_.CommandLine -match 'wechat-bridge^|wechat-channel^|cli\\.mjs.*start' } ^| ForEach-Object { Stop-Process -Id $_.ProcessId -Force }" ^>nul 2^>^&1
-echo echo Starting WeChat Bridge...
-echo node .claude\wechat-bridge.mjs
-echo echo Bridge stopped.
-echo pause ^>nul
-) > "%USERPROFILE%\.claude\start-wechat-channel.bat"
-echo   [完成] start-wechat-channel.bat ^(含自动清理旧进程^)
-
-:: 开机自启
+echo   配置开机自启...
 set "STARTUP_DIR=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup"
 if exist "!STARTUP_DIR!" (
     echo CreateObject^("Wscript.Shell"^).Run "cmd /c %USERPROFILE%\.claude\start-wechat-channel.bat", 0, False > "!STARTUP_DIR!\claude-wechat.vbs"
-    echo   [完成] 开机自启已配置
+    echo   [完成] 开机自启已配置 ^(关机重启自动恢复^)
 ) else (
     echo   [警告] 未找到启动文件夹，跳过开机自启
 )
