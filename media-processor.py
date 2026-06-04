@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
-"""Media processor for WeChat Bridge. Outputs text to stdout in UTF-8."""
-import sys, os, subprocess, json
+"""Media processor for WeChat Bridge. All local, zero API cost.
+- Image: CLIP scene detection (free) + PaddleOCR text (free)
+- Voice: Whisper speech-to-text (free)
+- Video: Whisper audio + frame OCR (free)
+Outputs text to stdout in UTF-8."""
+
+import sys, os, subprocess
 from pathlib import Path
 
 CACHE_DIR = os.path.expanduser("~/.claude/channels/wechat/media/processed")
@@ -19,24 +24,43 @@ FFMPEG = os.path.join(_FFMPEG_BASE, "ffmpeg.exe") if os.path.isdir(_FFMPEG_BASE)
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
 
+# PaddleOCR singleton
+_ocr = None
+
+
+def _get_ocr():
+    global _ocr
+    if _ocr is None:
+        from paddleocr import PaddleOCR
+        _ocr = PaddleOCR(lang="ch", show_log=False)
+    return _ocr
+
+
+def _detect_scene(path):
+    """Free local scene detection via CLIP."""
+    try:
+        from local_vision import describe_image
+        result = describe_image(path)
+        return result
+    except Exception:
+        return None
+
 
 def ocr_image(path):
-    """Image analysis: cloud tagging + OCR (local PaddleOCR + cloud fallback)."""
+    """Image analysis: CLIP scene detection + PaddleOCR text (all local, free)."""
     parts = []
 
-    # 1. Cloud image tagging (Tencent Cloud TIIA)
+    # 1. Free local scene classification (CLIP, replaces TIIA)
     try:
-        from cloud_vision import image_tag
-        tags = image_tag(path)
-        if tags and "[未识别到标签]" not in tags:
-            parts.append(f"[图片场景] {tags}")
+        scene = _detect_scene(path)
+        if scene:
+            parts.append(scene)
     except Exception:
         pass
 
-    # 2. OCR via PaddleOCR (local, reliable for Chinese text)
+    # 2. Free local OCR (PaddleOCR)
     try:
-        from paddleocr import PaddleOCR
-        ocr = PaddleOCR(lang="ch", show_log=False)
+        ocr = _get_ocr()
         result = ocr.ocr(path)
         lines = []
         if result and result[0]:
@@ -47,46 +71,25 @@ def ocr_image(path):
         if lines:
             parts.append(f"[图片文字]\n" + "\n".join(lines))
     except Exception:
-        # PaddleOCR failed, try cloud OCR
-        try:
-            from cloud_vision import ocr_general
-            text = ocr_general(path)
-            if text and "[OCR:" not in text:
-                parts.append(f"[图片文字(云)]\n{text}")
-        except Exception:
-            pass
+        pass
 
     return "\n".join(parts) if parts else "[未识别到内容]"
 
 
 def transcribe_voice(path):
+    """Free local speech recognition via Whisper."""
     import whisper
     model = whisper.load_model("medium")
     result = model.transcribe(path, language="zh")
     return result["text"].strip() or "[Whisper: 未识别到语音]"
 
 
-def analyze_video_scene(path):
-    """Use Tencent Cloud to understand what's happening in a video."""
-    try:
-        from cloud_vision import video_analyze
-        return video_analyze(path)
-    except Exception as e:
-        return f"[视频场景分析失败: {e}]"
-
-
 def process_video(path):
+    """Video processing: Whisper audio + frame OCR (all local, free)."""
     output = []
     basename = Path(path).stem
 
-    # Scene analysis via Tencent Cloud
-    try:
-        scene = analyze_video_scene(path)
-        if scene and "[视频场景分析失败]" not in scene:
-            output.append(scene)
-    except:
-        pass
-
+    # Extract and transcribe audio
     audio_path = os.path.join(CACHE_DIR, f"{basename}_audio.wav")
     subprocess.run([
         FFMPEG, "-i", path, "-vn", "-acodec", "pcm_s16le",
@@ -100,6 +103,7 @@ def process_video(path):
         except Exception as e:
             output.append(f"[语音转写失败: {e}]")
 
+    # Extract key frames and OCR
     frames_dir = os.path.join(CACHE_DIR, f"{basename}_frames")
     os.makedirs(frames_dir, exist_ok=True)
     subprocess.run([
@@ -113,7 +117,7 @@ def process_video(path):
         for f in frames[:6]:
             try:
                 text = ocr_image(str(f))
-                if text and "[OCR: 未识别到文字]" not in text:
+                if text and "[未识别到内容]" not in text:
                     output.append(f"--- {f.name} ---\n{text}")
             except Exception as e:
                 pass
