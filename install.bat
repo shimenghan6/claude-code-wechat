@@ -8,53 +8,60 @@ echo   =============================================
 echo    Claude Code 微信桥接 — 一键安装
 echo   =============================================
 echo.
+echo   全自动安装，无需手动操作，请耐心等待...
+echo.
 
 :: ================================================
-:: 环境检测
+:: 环境检测（缺环境仅警告，不中断）
 :: ================================================
-echo [检测] Node.js...
+set OK_NODE=1
+set OK_PYTHON=1
+set OK_FFMPEG=1
+
+echo [1/5] 环境检测...
+echo.
+
+echo   [检测] Node.js...
 where node >nul 2>&1
 if !errorlevel! neq 0 (
-    echo   [错误] 未找到 Node.js，请从 https://nodejs.org 安装
-    pause
-    exit /b 1
+    echo   [警告] 未找到 Node.js，尝试 winget 安装...
+    call winget install OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements
+    where node >nul 2>&1
+    if !errorlevel! neq 0 (
+        echo   [警告] Node.js 安装失败，npm 依赖将跳过
+        set OK_NODE=0
+    ) else (
+        echo   [完成] Node.js 已安装
+    )
+) else (
+    for /f "tokens=*" %%i in ('node -v') do echo   [完成] Node.js %%i
 )
-for /f "tokens=*" %%i in ('node -v') do echo   [完成] Node.js %%i
 
-echo [检测] Python...
+echo   [检测] Python...
 where python >nul 2>&1
 if !errorlevel! neq 0 (
-    echo   [错误] 未找到 Python，请从 https://python.org 安装
-    pause
-    exit /b 1
-)
-for /f "tokens=*" %%i in ('python --version 2^>^&1') do echo   [完成] Python %%i
-
-:: ================================================
-:: 基础安装
-:: ================================================
-echo.
-echo [1/4] 安装 Node.js 依赖...
-call npm install -g claude-code-wechat-channel @weixin-claw/core
-if !errorlevel! neq 0 (
-    echo   [警告] npm 安装失败，继续...
+    echo   [警告] 未找到 Python，尝试 winget 安装...
+    call winget install Python.Python.3.12 --accept-package-agreements --accept-source-agreements
+    where python >nul 2>&1
+    if !errorlevel! neq 0 (
+        echo   [警告] Python 安装失败，pip 依赖将跳过
+        set OK_PYTHON=0
+    ) else (
+        echo   [完成] Python 已安装
+    )
+) else (
+    for /f "tokens=*" %%i in ('python --version 2^>^&1') do echo   [完成] Python %%i
 )
 
-echo.
-echo [2/4] 安装 Python 依赖...
-call pip install paddleocr==2.9.1 paddlepaddle==2.6.2 openai-whisper tencentcloud-sdk-python
-if !errorlevel! neq 0 (
-    echo   [警告] pip 安装失败，继续...
-)
-
-echo.
-echo [3/4] 检测 FFmpeg...
+echo   [检测] FFmpeg...
 where ffmpeg >nul 2>&1
 if !errorlevel! neq 0 (
-    echo   未找到 FFmpeg，正在自动安装...
-    call winget install ffmpeg
+    echo   [警告] 未找到 FFmpeg，尝试 winget 安装...
+    call winget install Gyan.FFmpeg --accept-package-agreements --accept-source-agreements
+    where ffmpeg >nul 2>&1
     if !errorlevel! neq 0 (
-        echo   [警告] FFmpeg 自动安装失败，请手动安装：https://ffmpeg.org
+        echo   [警告] FFmpeg 安装失败，语音/视频功能不可用
+        set OK_FFMPEG=0
     ) else (
         echo   [完成] FFmpeg 已安装
     )
@@ -63,40 +70,28 @@ if !errorlevel! neq 0 (
 )
 
 :: ================================================
-:: 可选功能
+:: 依赖安装（失败不中断，继续后续步骤）
 :: ================================================
-set "ENABLE_SLEEP=0"
-set "ENABLE_VOLUME=0"
-
 echo.
-echo   -----------------------------------------------
-echo    可选功能
-echo   -----------------------------------------------
-echo.
-echo   [1] 远程睡眠 — 微信发"让电脑睡眠"即可
-echo        ^(需要在 settings.json 中配置权限^)
-echo.
-echo   [2] 音量控制 — 微信发"音量调到50"即可
-echo        ^(需要：pip install pycaw^)
-echo.
-set /p CHOICE="  启用哪些功能？输入数字（如 12 全开，0 跳过）："
+echo [2/5] 安装依赖...
 
-if "!CHOICE!"=="" set CHOICE=0
-
-set "CHECK=!CHOICE!"
-if not "!CHECK:1=!"=="!CHECK!" set ENABLE_SLEEP=1
-if not "!CHECK:2=!"=="!CHECK!" set ENABLE_VOLUME=1
-
-:: 安装可选依赖
-if !ENABLE_VOLUME! equ 1 (
-    echo.
-    echo   [可选] 安装音量控制依赖 ^(pycaw^)...
-    call pip install pycaw
+if !OK_NODE! equ 1 (
+    echo   [npm] 安装 claude-code-wechat-channel @weixin-claw/core...
+    call npm install -g claude-code-wechat-channel @weixin-claw/core
     if !errorlevel! neq 0 (
-        echo   [警告] pycaw 安装失败，音量控制不可用
-        set ENABLE_VOLUME=0
+        echo   [警告] npm 安装失败，桥接可能无法启动
     ) else (
-        echo   [完成] pycaw 已安装
+        echo   [完成] npm 依赖已安装
+    )
+)
+
+if !OK_PYTHON! equ 1 (
+    echo   [pip] 安装 paddleocr paddlepaddle openai-whisper tencentcloud-sdk-python...
+    call pip install paddleocr==2.9.1 paddlepaddle==2.6.2 openai-whisper tencentcloud-sdk-python -q
+    if !errorlevel! neq 0 (
+        echo   [警告] pip 安装失败，图片/语音识别不可用
+    ) else (
+        echo   [完成] pip 依赖已安装
     )
 )
 
@@ -104,39 +99,38 @@ if !ENABLE_VOLUME! equ 1 (
 :: 复制文件
 :: ================================================
 echo.
-echo [4/4] 复制文件...
+echo [3/5] 复制文件...
 if not exist "%USERPROFILE%\.claude" mkdir "%USERPROFILE%\.claude"
+if not exist "%USERPROFILE%\.claude\channels\wechat" mkdir "%USERPROFILE%\.claude\channels\wechat"
+
 copy /Y "%~dp0wechat-bridge.mjs" "%USERPROFILE%\.claude\wechat-bridge.mjs" >nul 2>&1
+echo   [完成] wechat-bridge.mjs
+
 copy /Y "%~dp0media-processor.py" "%USERPROFILE%\.claude\media-processor.py" >nul 2>&1
+echo   [完成] media-processor.py
+
 copy /Y "%~dp0cloud_vision.py" "%USERPROFILE%\.claude\cloud_vision.py" >nul 2>&1
-if exist "%~dp0cloud-vision.py" copy /Y "%~dp0cloud-vision.py" "%USERPROFILE%\.claude\cloud-vision.py" >nul 2>&1
+echo   [完成] cloud_vision.py
 
-:: 复制 start-wechat-channel.bat（含自动清理+崩溃重启+防重复）
+if exist "%~dp0cloud-vision.py" (
+    copy /Y "%~dp0cloud-vision.py" "%USERPROFILE%\.claude\cloud-vision.py" >nul 2>&1
+    echo   [完成] cloud-vision.py
+)
+
 copy /Y "%~dp0start-wechat-channel.bat" "%USERPROFILE%\.claude\start-wechat-channel.bat" >nul 2>&1
-echo   [完成] start-wechat-channel.bat ^(含自动清理+崩溃重启+防重复^)
+echo   [完成] start-wechat-channel.bat ^(自动重启+防重复^)
 
-:: 复制 SKILL.md 到 skills 目录
 if exist "%~dp0SKILL.md" (
     if not exist "%USERPROFILE%\.claude\skills\claude-code-wechat" mkdir "%USERPROFILE%\.claude\skills\claude-code-wechat" 2>nul
     copy /Y "%~dp0SKILL.md" "%USERPROFILE%\.claude\skills\claude-code-wechat\SKILL.md" >nul 2>&1
-    echo   [完成] SKILL.md 已安装
+    echo   [完成] SKILL.md
 )
-
-if !ENABLE_VOLUME! equ 1 (
-    if exist "%~dp0tools\volume.py" (
-        if not exist "%USERPROFILE%\.claude\tools" mkdir "%USERPROFILE%\.claude\tools" 2>nul
-        copy /Y "%~dp0tools\volume.py" "%USERPROFILE%\.claude\tools\volume.py" >nul 2>&1
-        echo   [完成] volume.py 已安装
-    )
-)
-
-echo   [完成] 核心文件已复制到 %USERPROFILE%\.claude\
 
 :: ================================================
 :: 开机自启
 :: ================================================
 echo.
-echo   配置开机自启...
+echo [4/5] 配置开机自启...
 set "STARTUP_DIR=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup"
 if exist "!STARTUP_DIR!" (
     echo CreateObject^("Wscript.Shell"^).Run "cmd /c %USERPROFILE%\.claude\start-wechat-channel.bat", 0, False > "!STARTUP_DIR!\claude-wechat.vbs"
@@ -146,39 +140,16 @@ if exist "!STARTUP_DIR!" (
 )
 
 :: ================================================
-:: 远程睡眠权限提示
-:: ================================================
-if !ENABLE_SLEEP! equ 1 (
-    echo.
-    echo   --- 远程睡眠权限 ---
-    echo   在 %USERPROFILE%\.claude\settings.json 中
-    echo   "permissions" -^> "allow" 下添加：
-    echo     "Bash^(rundll32.exe powrprof.dll,SetSuspendState *^)"
-)
-
-:: ================================================
-:: 音量控制提示
-:: ================================================
-if !ENABLE_VOLUME! equ 1 (
-    echo.
-    echo   --- 音量控制权限 ---
-    echo   在 settings.json 的 "permissions" -^> "allow" 下添加：
-    echo     "Bash^(python *volume.py*^)"
-    echo.
-    echo   命令示例：
-    echo     python %USERPROFILE%\.claude\tools\volume.py mute
-    echo     python %USERPROFILE%\.claude\tools\volume.py 50
-)
-
-:: ================================================
-:: 微信内置命令
+:: 启动桥接
 :: ================================================
 echo.
-echo   --- 微信内置命令 ---
-echo   从微信发送以下指令：
-echo     "重新打开会话" — 刷新会话（保留历史^)
-echo     "让电脑睡眠"   — 远程睡眠（需先启用^)
-echo     "音量调到50"    — 音量控制（需先启用^)
+echo [5/5] 启动微信桥接...
+echo   [提示] 如果尚未绑定微信，请先运行以下命令获取扫码链接：
+echo   curl -s https://ilinkai.weixin.qq.com/ilink/bot/get_bot_qrcode?bot_type=3
+echo.
+echo   正在启动桥接...
+start "Claude 微信桥接" cmd /k "%USERPROFILE%\.claude\start-wechat-channel.bat"
+echo   [完成] 桥接已启动 ^(崩溃自动重启^)
 
 :: ================================================
 :: 完成
@@ -186,20 +157,24 @@ echo     "音量调到50"    — 音量控制（需先启用^)
 echo.
 echo   =============================================
 echo    安装完成！
-echo.
-echo    下一步：
-echo    1. 扫码绑定：
-echo       curl -s https://ilinkai.weixin.qq.com/ilink/bot/get_bot_qrcode?bot_type=3
-echo    2. 保存凭证到 %USERPROFILE%\.claude\channels\wechat\account.json
-echo    3. 启动桥接：
-echo       双击 start-wechat-channel.bat
-echo       或：node %USERPROFILE%\.claude\wechat-bridge.mjs
-echo.
-echo    图片识别功能（腾讯云）：
-echo    4. 注册 https://cloud.tencent.com 获取 API Key
-echo       详见 README.md
 echo   =============================================
+echo.
+echo    已安装：
+echo    - 微信桥接 ^(wechat-bridge^)     [已启动]
+echo    - 开机自启               [已配置]
+echo    - 崩溃自动重启            [已启用]
+echo    - 图片识别 ^(PaddleOCR^)    [!OK_PYTHON! equ 1 && echo OK || echo 跳过]
+echo    - 语音识别 ^(Whisper^)      [!OK_PYTHON! equ 1 && echo OK || echo 跳过]
+echo    - 图片识景 ^(腾讯云^)      [需手动配置 API Key]
+echo    - 视频分析 ^(FFmpeg^)       [!OK_FFMPEG! equ 1 && echo OK || echo 跳过]
+echo.
+echo    首次使用需绑定微信：
+echo    1. 桌面找到新开的 "Claude 微信桥接" 窗口
+echo    2. 或运行: node %USERPROFILE%\.claude\wechat-bridge.mjs
+echo.
+echo    微信内置命令：
+echo    "重新打开会话" - 刷新会话
+echo    "让电脑睡眠"   - 远程睡眠
 echo.
 
 endlocal
-pause
