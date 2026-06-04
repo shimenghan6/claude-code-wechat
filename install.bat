@@ -148,7 +148,7 @@ echo   [提示] 如果尚未绑定微信，请先运行以下命令获取扫码�
 echo   curl -s https://ilinkai.weixin.qq.com/ilink/bot/get_bot_qrcode?bot_type=3
 echo.
 echo   正在启动桥接...
-start "Claude 微信桥接" cmd /k "%USERPROFILE%\.claude\start-wechat-channel.bat"
+powershell -Command "Start-Process cmd -ArgumentList '/c', '%USERPROFILE%\.claude\start-wechat-channel.bat' -WindowStyle Hidden"
 echo   [完成] 桥接已启动 ^(崩溃自动重启^)
 
 :: ================================================
